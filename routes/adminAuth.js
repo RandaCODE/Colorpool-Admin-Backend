@@ -4,6 +4,30 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 
+// @route   GET /admin/auth/debug-admin
+// @desc    Debug admin document structure
+router.get('/debug-admin', async (req, res) => {
+    try {
+        const admin = await Admin.findOne({ username: 'admin' }).lean();
+        if (!admin) {
+            return res.json({ found: false });
+        }
+        res.json({
+            found: true,
+            username: admin.username,
+            email: admin.email,
+            role: admin.role,
+            hasPasswordHash: !!admin.passwordHash,
+            hashLength: admin.passwordHash ? admin.passwordHash.length : 0,
+            hasPassword: !!admin.password,
+            passwordLength: admin.password ? admin.password.length : 0,
+            keysFound: Object.keys(admin)
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // @route   POST /admin/auth/login
 // @desc    Auth admin & get token
 router.post('/login', async (req, res) => {
