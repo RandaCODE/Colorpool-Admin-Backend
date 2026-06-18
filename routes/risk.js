@@ -5,8 +5,17 @@ const Bet = require('../models/Bet');
 const Round = require('../models/Round');
 const Transaction = require('../models/Transaction');
 
+// Middleware to check if user has risk/admin permissions
+const canViewRisk = (req, res, next) => {
+    if (req.admin.role === 'super_admin' || req.admin.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Admin permissions required' });
+    }
+};
+
 // @route   GET /admin/risk/exposure
-router.get('/exposure', auth, async (req, res) => {
+router.get('/exposure', auth, canViewRisk, async (req, res) => {
     try {
         const activeRound = await Round.findOne({ status: 'active' });
         if (!activeRound) return res.status(404).json({ msg: 'No active round found' });
@@ -19,7 +28,7 @@ router.get('/exposure', auth, async (req, res) => {
         colors.forEach(color => {
             const colorBets = bets.filter(b => b.color === color);
             const totalStaked = colorBets.reduce((sum, b) => sum + b.amount, 0);
-            const multiplier = color === 'purple' ? 3 : 2; // Assuming 2x for Green/Blue, 3x for Purple
+            const multiplier = color === 'purple' ? 3 : 2;
             const potentialPayout = totalStaked * multiplier;
 
             exposure[color] = {
@@ -29,7 +38,6 @@ router.get('/exposure', auth, async (req, res) => {
             };
         });
 
-        // Calculate Reserve for Net Profit/Loss
         const deposits = await Transaction.aggregate([
             { $match: { type: 'deposit', status: 'approved' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -44,7 +52,6 @@ router.get('/exposure', auth, async (req, res) => {
 
         const analysis = colors.map(color => {
             const payout = exposure[color].potentialPayout;
-            const netProfit = exposure[color].totalStaked - payout; // This is a bit simplified, usually profit is total stakes from OTHER colors - payout
             const totalStakedInRound = bets.reduce((sum, b) => sum + b.amount, 0);
             const actualProfitIfWins = totalStakedInRound - payout;
 

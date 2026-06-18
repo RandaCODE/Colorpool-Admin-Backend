@@ -5,8 +5,25 @@ const Round = require('../models/Round');
 const Bet = require('../models/Bet');
 const User = require('../models/User');
 
+// Middleware to check if user has admin permissions
+const canViewRounds = (req, res, next) => {
+    if (req.admin.role === 'super_admin' || req.admin.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Admin permissions required' });
+    }
+};
+
+const canManageRounds = (req, res, next) => {
+    if (req.admin.role === 'super_admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Super Admin permissions required' });
+    }
+};
+
 // @route   POST /admin/rounds/start
-router.post('/start', auth, async (req, res) => {
+router.post('/start', auth, canManageRounds, async (req, res) => {
     try {
         const roundNumber = `RN-${Date.now()}`;
         const newRound = new Round({ roundNumber });
@@ -20,13 +37,9 @@ router.post('/start', auth, async (req, res) => {
 
 // @route   PUT /admin/rounds/:id/end
 // Manual Override / End Round
-router.put('/:id/end', auth, async (req, res) => {
+router.put('/:id/end', auth, canManageRounds, async (req, res) => {
     const { winningColor } = req.body;
     try {
-        if (req.admin.role !== 'super_admin') {
-            return res.status(403).json({ msg: 'Not authorized for manual override' });
-        }
-
         const round = await Round.findById(req.params.id);
         if (!round) return res.status(404).json({ msg: 'Round not found' });
 
@@ -64,7 +77,7 @@ router.put('/:id/end', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/rounds/:id/pause
-router.put('/:id/pause', auth, async (req, res) => {
+router.put('/:id/pause', auth, canManageRounds, async (req, res) => {
     try {
         const round = await Round.findById(req.params.id);
         round.status = 'paused';

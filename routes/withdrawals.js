@@ -4,6 +4,15 @@ const auth = require('../middleware/auth');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
+// Middleware to check if user has finance permissions
+const canManageFinance = (req, res, next) => {
+    if (req.admin.role === 'super_admin' || req.admin.role === 'finance_admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Finance permissions required' });
+    }
+};
+
 // @route   GET /admin/withdrawals
 router.get('/', auth, async (req, res) => {
     try {
@@ -20,7 +29,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/withdrawals/:id/approve
-router.put('/:id/approve', auth, async (req, res) => {
+router.put('/:id/approve', auth, canManageFinance, async (req, res) => {
     try {
         const withdrawal = await Transaction.findById(req.params.id);
         if (!withdrawal) return res.status(404).json({ msg: 'Withdrawal not found' });
@@ -35,7 +44,7 @@ router.put('/:id/approve', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/withdrawals/:id/paid
-router.put('/:id/paid', auth, async (req, res) => {
+router.put('/:id/paid', auth, canManageFinance, async (req, res) => {
     try {
         const withdrawal = await Transaction.findById(req.params.id);
         if (!withdrawal) return res.status(404).json({ msg: 'Withdrawal not found' });
@@ -54,7 +63,7 @@ router.put('/:id/paid', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/withdrawals/:id/reject
-router.put('/:id/reject', auth, async (req, res) => {
+router.put('/:id/reject', auth, canManageFinance, async (req, res) => {
     try {
         const withdrawal = await Transaction.findById(req.params.id);
         if (!withdrawal) return res.status(404).json({ msg: 'Withdrawal not found' });

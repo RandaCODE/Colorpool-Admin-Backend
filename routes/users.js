@@ -3,8 +3,33 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 
+// Middleware to check if user has admin/super_admin permissions
+const canViewUsers = (req, res, next) => {
+    if (req.admin.role === 'super_admin' || req.admin.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Admin permissions required' });
+    }
+};
+
+const canManageUsers = (req, res, next) => {
+    if (req.admin.role === 'super_admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Super Admin permissions required' });
+    }
+};
+
+const canManageWallets = (req, res, next) => {
+    if (req.admin.role === 'super_admin' || req.admin.role === 'finance_admin') {
+        next();
+    } else {
+        res.status(403).json({ msg: 'Access denied: Finance/Super Admin permissions required' });
+    }
+};
+
 // @route   GET /admin/users
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, canViewUsers, async (req, res) => {
     try {
         const users = await User.find().sort({ createdAt: -1 });
         res.json(users);
@@ -15,7 +40,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // @route   GET /admin/users/:id
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth, canViewUsers, async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ msg: 'User not found' });
@@ -27,7 +52,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/users/:id/status
-router.put('/:id/status', auth, async (req, res) => {
+router.put('/:id/status', auth, canManageUsers, async (req, res) => {
     const { status } = req.body;
     try {
         const user = await User.findById(req.params.id);
@@ -43,7 +68,7 @@ router.put('/:id/status', auth, async (req, res) => {
 });
 
 // @route   PUT /admin/users/:id/wallet
-router.put('/:id/wallet', auth, async (req, res) => {
+router.put('/:id/wallet', auth, canManageWallets, async (req, res) => {
     const { amount, action } = req.body; // action: 'add' or 'deduct'
     try {
         const user = await User.findById(req.params.id);

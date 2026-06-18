@@ -1,9 +1,27 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const admin = require('firebase-admin');
 require('dotenv').config();
 
 const app = express();
+
+// Initialize Firebase Admin
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        if (admin.apps.length === 0) {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            });
+            console.log('Firebase Admin Initialized');
+        }
+    } catch (err) {
+        console.error('Firebase Admin Initialization Error:', err.message);
+    }
+} else {
+    console.warn('FIREBASE_SERVICE_ACCOUNT not found in environment variables. Firebase Admin not initialized.');
+}
 
 // Middleware
 app.use(cors());
