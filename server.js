@@ -2,9 +2,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Initialize Firebase Admin
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -36,6 +45,9 @@ mongoose
     .then(() => console.log('MongoDB Connected...'))
     .catch(err => console.log(err));
 
+// Make io accessible to routes
+app.set('io', io);
+
 // Use Routes
 app.use('/admin/auth', require('./routes/adminAuth'));
 app.use('/admin/dashboard', require('./routes/dashboard'));
@@ -46,4 +58,4 @@ app.use('/admin/rounds', require('./routes/rounds'));
 
 const port = process.env.PORT || 5000;
 
-app.listen(port, () => console.log(`Server started on port ${port}`));
+server.listen(port, () => console.log(`Server started on port ${port}`));
